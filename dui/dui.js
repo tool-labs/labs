@@ -1,10 +1,12 @@
 /*
 
 Deep User Inspector (DUI)
-Copyright (C) 2013 Ricordisamoa
+Copyright (C) 2013 Ricordisamoa, ireas
 
 meta.wikimedia.org/wiki/User:Ricordisamoa
 tools.wmflabs.org/ricordisamoa/
+
+de.wikipedia.org/wiki/User:ireas
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -119,6 +121,44 @@ uploads=[];
 weekdays=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 weekdaysShort=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/**
+ * Returns the pattern for the user’s opt-in page.
+ *
+ * @param username the user to get the opt-in page for
+ * @return the title of the opt-in page for the given user
+ */
+function getOptInPageTitle(username) {
+	return 'User:' + username + '/EditCounterOptIn-DUI.js';
+}
+
+/**
+ * Ensures that the page {@code "User:<user>/EditCounterOptIn-DUI.js"} exists
+ * in the wiki that is checked or on meta.  If it does not exist, the error is
+ * reported and an exception is thrown.
+ *
+ * @param callback the method to call if everything is fine
+ */
+function requireOptInPage(callback) {
+	var pageTitle = getOptInPageTitle(user);
+	var args = {action: 'query', titles: getOptInPageTitle(user), format: 'json'};
+
+	$.get(api, args,
+		function (b) {
+			if (!('-1' in b.query.pages)) {
+				callback();
+			} else {
+				$.get('https://meta.wikimedia.org/w/api.php', args, function (b2) {
+						if (!('-1' in b.query.pages)) {
+							callback();
+						} else {
+							$('#init').replaceWith('<b>Opt in page ' + pageTitle + ' not found!</b>');
+							throw new Error('No opt-in!');
+						}
+					}, 'jsonp');
+			}
+		}, 'jsonp');
+}
 
 function getNamespaces(callback){
 	$.get(
@@ -523,6 +563,10 @@ function prettyJoin(array){
 	}
 }
 function init(){
+	requireOptInPage(inspectUser);
+}
+
+function inspectUser() {
 	var editCounterInitDate=new Date();
 	getNamespaces(function(namespaces){
 		window.namespaces=namespaces;
@@ -793,7 +837,7 @@ function init(){
 $(document).ready(function(){
 	$('#init').click(function(event){
 		event.preventDefault();
-		$(this).replaceWith('I warned you! Wait...');
+		$(this).replaceWith('<div id="init">I warned you! Wait...</div>');
 		window.wikipath='//'+$('#p').val()+'.org/wiki/';
 		window.api='//'+$('#p').val()+'.org/w/api.php';
 		window.user=$('#u').val();
